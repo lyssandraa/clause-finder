@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Downloaded dataset (re-download with: python -m clause_finder.data)
+data/raw/
+
+# LLM response cache
+data/cache/
+
+# Only the reported evaluation is kept in the repository
+results/*
+!results/test_qwen3-8b/
