@@ -1,0 +1,92 @@
+{
+  "model": "qwen3:8b",
+  "effort": "medium",
+  "contracts": 50,
+  "chunks": 188,
+  "api_calls_this_run": 188,
+  "cached_calls": 0,
+  "input_tokens": 859824,
+  "output_tokens": 33799,
+  "quotes_returned": 394,
+  "quotes_dropped": 15,
+  "dropped_examples": [
+    {
+      "contract": "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT",
+      "clause_type": "Anti-Assignment",
+      "quote": "This Agreement may not be assigned by Consultant."
+    },
+    {
+      "contract": "AimmuneTherapeuticsInc_20200205_8-K_EX-10.3_11967170_EX-10.3_Development Agreement",
+      "clause_type": "Non-Compete",
+      "quote": "Aimmune hereby covenants and agrees that it shall not (and shall cause the other Aimmune Agreement Entities not to), either directly or indirectly, Develop, Manufacture, or Commercialize the Product for use outside the Licensed Field."
+    },
+    {
+      "contract": "BICYCLETHERAPEUTICSPLC_03_10_2020-EX-10.11-SERVICE AGREEMENT",
+      "clause_type": "Non-Compete",
+      "quote": "14.1 For the purpose of this paragraph 14 the following expressions shall have the following meanings:\n\"Restricted Business\" means any business which (i) carries on research in the field of constrained peptides, including, without limitation, all work in the field of lead constrained peptide identification and optimization and pre-clinical development of constrained peptide therapeutics or (ii) is developing a drug conjugate compound for treating cancer that targets the same target as a drug conjugate compound in development by any Group Company;"
+    },
+    {
+      "contract": "BONTONSTORESINC_04_20_2018-EX-99.3-AGENCY AGREEMENT",
+      "clause_type": "Cap on Liability",
+      "quote": "Merchant shall not, without the prior consent of Agent, raise the salary or wages or increase the benefits for, or pay any bonuses or other extraordinary payments to, any Store or Distribution Center employees prior to the Sale Termination Date."
+    },
+    {
+      "contract": "CURAEGISTECHNOLOGIES,INC_05_26_2010-EX-1-CORPORATE SPONSORSHIP AGREEMENT",
+      "clause_type": "Anti-Assignment",
+      "quote": "Neither party may assign its rights or powers under this Agreement without the express written consent of the other, which consent shall not be unreasonably withheld."
+    },
+    {
+      "contract": "ENTRUSTINC_07_24_1998-EX-10.5-STRATEGIC ALLIANCE AGREEMENT",
+      "clause_type": "Cap on Liability",
+      "quote": "The licenses granted hereunder do not include for the Grantee the right to grant sublicenses to any third party except as expressly provide in Section 6.03."
+    },
+    {
+      "contract": "ENTRUSTINC_07_24_1998-EX-10.5-STRATEGIC ALLIANCE AGREEMENT",
+      "clause_type": "Governing Law",
+      "quote": "This Agreement shall be governed by and be construed in accordance with the laws of the Province of Ontario, Canada."
+    },
+    {
+      "contract": "ExactSciencesCorp_20180822_8-K_EX-10.1_11331629_EX-10.1_Promotion Agreement",
+      "clause_type": "Anti-Assignment",
+      "quote": "9.1 Assignment. Neither Party shall assign, transfer, or otherwise convey its rights or obligations under this Agreement without the prior written consent of the other Party, except that either Party may assign its rights and obligations under this Agreement to an Affiliate, provided that such Affiliate agrees to be bound by the terms and conditions of this Agreement."
+    },
+    {
+      "contract": "ExactSciencesCorp_20180822_8-K_EX-10.1_11331629_EX-10.1_Promotion Agreement",
+      "clause_type": "Cap on Liability",
+      "quote": "6.3 Limitation of Liability. Except as otherwise required by law, neither Party shall be liable for any indirect, incidental, special, punitive, or consequential damages, including but not limited to lost profits, lost savings, lost business opportunities, or any other damages, whether based in contract, tort, or otherwise, arising out of or relating to this Agreement or the use or inability to use the Product or the services provided under this Agreement."
+    },
+    {
+      "contract": "ExactSciencesCorp_20180822_8-K_EX-10.1_11331629_EX-10.1_Promotion Agreement",
+      "clause_type": "Governing Law",
+      "quote": "9.10 Governing Law. This Agreement shall be governed by and construed in accordance with the laws of the State of New York, without regard to its conflict of law principles."
+    },
+    {
+      "contract": "PROLONGINTERNATIONALCORP_03_23_1998-EX-10.16-SPONSORSHIP AGREEMENT",
+      "clause_type": "Anti-Assignment",
+      "quote": "This Agreement may not be assigned by either party without the prior written consent of the other party."
+    },
+    {
+      "contract": "PROLONGINTERNATIONALCORP_03_23_1998-EX-10.16-SPONSORSHIP AGREEMENT",
+      "clause_type": "Governing Law",
+      "quote": "This Agreement shall be governed by and construed in accordance with the substantive laws of the State of North Carolina."
+    },
+    {
+      "contract": "RaeSystemsInc_20001114_10-Q_EX-10.57_2631790_EX-10.57_Co-Branding Agreement",
+      "clause_type": "Termination for Convenience",
+      "quote": "NETTAXI may terminate this Agreement at any time for its convenience, for no reason or for any reason, upon sixty (60) days prior written notice to SpinRecords.com. SpinRecords.com may terminate this Agreement for no reason or for any reason upon sixty (60) days prior written notice to NETTAXI."
+    },
+    {
+      "contract": "RaeSystemsInc_20001114_10-Q_EX-10.57_2631790_EX-10.57_Co-Branding Agreement",
+      "clause_type": "Governing Law",
+      "quote": "This Agreement and any action related thereto shall be governed, controlled, interpreted and defined by and under the laws of the State of California and the United States, without regard to the conflicts of laws provisions thereof."
+    },
+    {
+      "contract": "RemarkHoldingsInc_20081114_10-Q_EX-10.24_2895649_EX-10.24_Content License Agreement",
+      "clause_type": "Non-Compete",
+      "quote": "HSWI may not sublicense the Content, Images or Affinities to any paid-subscription website which is an aggregator of third-party content (for the avoidance of doubt, such shall not include the HSWI Websites). Notwithstanding anything to the contrary herein, attached as Attachment B is a list of companies (the \"Competitors II\") which are competitors with World Book and to whom sublicense may be made only with prior written consent of World Book, which World Book may withhold at its sole discretion."
+    }
+  ],
+  "errors": [],
+  "hallucination_rate": 0.03807106598984772,
+  "estimated_cost_usd": 0.0
+}
