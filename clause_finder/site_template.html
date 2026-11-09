@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Clause Finder Results</title>
+<meta name="description" content="How a regex baseline and a local language model compare at finding six M&amp;A clause types in 50 lawyer-labelled contracts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: a marked-up review file. One reading column for the argument, full width for the evidence. */
+:root {
+  --bg: #f5f7fa; --surface: #ffffff; --ink: #14202e; --ink-2: #47566a; --rule: #d9e0e8; --tint: #e9eef4;
+  --marker: #ffe07a; --regex: #2a78d6; --qwen: #d9622b;
+  --good: #0b7a43; --good-bg: #dff3e7; --bad: #b3261e; --bad-bg: #fbe3e0; --warn: #8a5a00; --warn-bg: #fcefcf;
+  --serif: "Spectral", Georgia, "Times New Roman", serif;
+  --sans: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161c; --surface: #1a2028; --ink: #eef2f6; --ink-2: #aab6c4; --rule: #303a46; --tint: #242c36;
+  --marker: #6b5610; --regex: #3987e5; --qwen: #d95926;
+  --good: #62d394; --good-bg: #173a29; --bad: #ff9a90; --bad-bg: #4a211e; --warn: #f0c566; --warn-bg: #43340f;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #12161c; --surface: #1a2028; --ink: #eef2f6; --ink-2: #aab6c4; --rule: #303a46; --tint: #242c36;
+  --marker: #6b5610; --regex: #3987e5; --qwen: #d95926;
+  --good: #62d394; --good-bg: #173a29; --bad: #ff9a90; --bad-bg: #4a211e; --warn: #f0c566; --warn-bg: #43340f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.6 var(--sans); }
+.wrap { max-width: 68rem; margin: 0 auto; padding-block: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: inherit; text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--regex); outline-offset: 2px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h1 { font: 600 clamp(2.2rem, 5.6vw, 3.9rem)/1.1 var(--serif); letter-spacing: -0.015em; max-width: 19ch; }
+h2 { font: 600 clamp(1.6rem, 3.4vw, 2.2rem)/1.2 var(--serif); }
+h3 { font: 600 1.05rem/1.35 var(--sans); }
+p { margin: 0; max-width: 65ch; }
+mark { background: var(--marker); color: inherit; padding: 0 0.12em; }
+.label { font: 500 0.75rem/1.4 var(--mono); letter-spacing: 0.04em; color: var(--ink-2); }
+.muted { color: var(--ink-2); }
+.small { font-size: 0.9rem; }
+.stack { display: grid; gap: 1rem; min-width: 0; }
+
+nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; padding-block: 1.1rem; border-bottom: 1px solid var(--rule); font-size: 0.92rem; }
+nav strong { margin-right: auto; font: 500 0.95rem var(--mono); }
+nav a { text-decoration: none; color: var(--ink-2); }
+nav a:hover { color: var(--ink); text-decoration: underline; }
+
+header { padding-block: clamp(2.5rem, 6vw, 4.5rem) 2.5rem; display: grid; gap: 1.25rem; }
+.lede { font-size: 1.2rem; line-height: 1.55; }
+.notice { display: grid; gap: 0.2rem; padding: 0.9rem 1.1rem; background: var(--warn-bg); color: var(--ink); max-width: 65ch; }
+.notice b { color: var(--warn); }
+
+.scoreline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-block: 1px solid var(--rule); }
+.scoreline > div { padding: 1.1rem 1.1rem 1.1rem 0; display: grid; gap: 0.3rem; align-content: start; min-width: 0; }
+.scoreline > div + div { padding-left: 1.1rem; border-left: 1px solid var(--rule); }
+.pair { font: 500 1.65rem/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+.pair span { color: var(--ink-2); font-size: 1rem; }
+
+section { padding-block: clamp(2.5rem, 5vw, 4rem); border-top: 1px solid var(--rule); display: grid; gap: 1.5rem; }
+header + section { border-top: 0; }
+
+ol.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.25rem; }
+ol.steps li { counter-increment: step; display: grid; gap: 0.4rem; align-content: start; font-size: 0.95rem; min-width: 0; }
+ol.steps li::before { content: counter(step); font: 500 0.85rem var(--mono); color: var(--ink-2); border-bottom: 1px solid var(--ink-2); padding-bottom: 0.3rem; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: end; }
+.field { display: grid; gap: 0.25rem; min-width: 0; max-width: 100%; }
+select { font: inherit; font-size: 0.95rem; color: var(--ink); background: var(--surface); border: 1px solid var(--ink-2); padding: 0.45rem 0.55rem; max-width: 100%; width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--ink-2); }
+.seg button { font: inherit; font-size: 0.92rem; padding: 0.42rem 0.8rem; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.legend { display: flex; gap: 1.25rem; font-size: 0.92rem; align-items: center; }
+.legend span { display: inline-flex; gap: 0.45rem; align-items: center; }
+.dot { width: 12px; height: 12px; display: inline-block; border-radius: 50%; }
+.dot.regex { background: var(--regex); }
+.dot.qwen { background: var(--qwen); border-radius: 0; transform: rotate(45deg) scale(0.86); }
+
+.chart { background: var(--surface); padding: 1.25rem; position: relative; }
+.row { display: grid; grid-template-columns: 13rem minmax(0, 1fr) 7.5rem; gap: 1rem; align-items: center; min-height: 2.6rem; }
+.row.total { border-top: 1px solid var(--rule); margin-top: 0.4rem; padding-top: 0.4rem; font-weight: 600; }
+.row .name { font-size: 0.95rem; }
+.row .delta { font: 400 0.82rem var(--mono); color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
+.track { position: relative; height: 1.5rem; margin-inline: 8px; background-image: linear-gradient(to right, var(--rule) 1px, transparent 1px); background-size: 25% 100%; border-right: 1px solid var(--rule); }
+.axis { position: relative; height: 1.2rem; margin-inline: 8px; font: 400 0.75rem var(--mono); color: var(--ink-2); }
+.axis span { position: absolute; transform: translateX(-50%); }
+.link { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: var(--ink-2); opacity: 0.55; }
+.mark { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; padding: 0; border: 0; box-shadow: 0 0 0 2px var(--surface); cursor: default; }
+.mark::after { content: ""; position: absolute; inset: -7px; }
+.mark.regex { background: var(--regex); border-radius: 50%; }
+.mark.qwen { background: var(--qwen); transform: rotate(45deg) scale(0.86); }
+#tip { position: absolute; z-index: 5; background: var(--ink); color: var(--bg); font: 400 0.8rem/1.4 var(--mono); padding: 0.35rem 0.55rem; pointer-events: none; white-space: nowrap; transform: translate(-50%, calc(-100% - 12px)); }
+
+.scroll { overflow-x: auto; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 0.5rem 0.7rem; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+th { font: 500 0.75rem var(--mono); color: var(--ink-2); vertical-align: bottom; }
+tr.start td { border-top: 1px solid var(--ink-2); }
+.win { font-weight: 700; }
+
+.findings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 2rem; margin: 0; padding: 0; list-style: none; }
+.findings li { display: grid; gap: 0.15rem; min-width: 0; }
+.findings li p { font-size: 0.98rem; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tabs button { font: inherit; font-size: 0.88rem; display: grid; gap: 0.1rem; text-align: left; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); padding: 0.4rem 0.65rem; cursor: pointer; }
+.tabs button[aria-selected="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.tabs small { color: var(--ink-2); font-size: 0.75rem; }
+.columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.col { background: var(--surface); padding: 1rem; display: grid; gap: 0.7rem; align-content: start; min-width: 0; }
+.col-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem; align-items: center; }
+.chip { font: 500 0.75rem var(--sans); padding: 0.12rem 0.45rem; white-space: nowrap; }
+.chip.good { background: var(--good-bg); color: var(--good); }
+.chip.bad { background: var(--bad-bg); color: var(--bad); }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.chip.none { background: var(--tint); color: var(--ink-2); }
+blockquote { margin: 0; font: 400 0.98rem/1.5 var(--serif); max-height: 18rem; overflow-y: auto; overflow-wrap: anywhere; padding-left: 0.75rem; border-left: 2px solid var(--rule); }
+.quote { display: grid; gap: 0.3rem; }
+.quote-note { font-size: 0.78rem; color: var(--ink-2); }
+.empty { font-style: italic; color: var(--ink-2); font-size: 0.95rem; }
+
+.failure { background: var(--surface); padding: 1rem 1.1rem; display: grid; gap: 0.7rem; min-width: 0; }
+.failure .pairing { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.cname { font: 400 0.78rem/1.4 var(--mono); color: var(--ink-2); overflow-wrap: anywhere; }
+details > summary { cursor: pointer; font-weight: 500; }
+details[open] > summary { margin-bottom: 1rem; }
+
+.risk { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 2rem; }
+.risk > div { display: grid; gap: 0.3rem; align-content: start; min-width: 0; }
+.risk p { font-size: 0.98rem; }
+footer { border-top: 1px solid var(--rule); padding-block: 2rem 3rem; font-size: 0.9rem; color: var(--ink-2); display: grid; gap: 0.6rem; }
+
+@media (max-width: 860px) {
+  ol.steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .columns, .two, .findings, .risk, .failure .pairing { grid-template-columns: minmax(0, 1fr); }
+  .scoreline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .scoreline > div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .scoreline > div:nth-child(n+3) { border-top: 1px solid var(--rule); }
+}
+@media (max-width: 620px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; gap: 0.1rem 0.75rem; padding-block: 0.3rem; }
+  .row .track { grid-column: 1 / -1; grid-row: 2; }
+  .row.axis-row .spacer { display: none; }
+  ol.steps { grid-template-columns: minmax(0, 1fr); }
+  .chart { padding: 1rem; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav aria-label="Sections">
+    <strong>clause-finder</strong>
+    <a href="#how">How it works</a>
+    <a href="#results">Results</a>
+    <a href="#explore">Contracts</a>
+    <a href="#failures">Failures</a>
+    <a href="#limits">Limitations</a>
+  </nav>
+
+  <header>
+    <div class="label" id="eyebrow"></div>
+    <h1>A small local AI model <mark>tied</mark> hand-written rules at finding contract clauses.</h1>
+    <p class="lede">This project looks for six clause types that matter in M&amp;A due diligence and checks every answer against lawyer-reviewed labels. Regex rules and a language model running on one consumer PC scored almost the same, and each was better at different clauses.</p>
+    <div class="notice"><b>This is a first-pass aid, not a reviewer.</b> <span>It misses clauses. A result of "not found" never means a clause is absent, and a lawyer must check every output.</span></div>
+    <noscript><p>The charts and contract explorer on this page need JavaScript. The full results table is in the project's README.</p></noscript>
+    <div class="scoreline" id="scoreline"></div>
+  </header>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <p>Both approaches read the same contracts and answer the same question: does this clause exist, and which words are it? Clauses come from the <a href="https://www.atticusprojectai.org/cuad">CUAD dataset</a>, 510 public commercial contracts labelled by law students and checked by experienced lawyers.</p>
+    <div class="two">
+      <div class="stack">
+        <h3><span class="dot regex" aria-hidden="true"></span>&nbsp; Regex rules</h3>
+        <p class="small">The contract is split into sentences. A sentence is returned if it matches a hand-written rule, such as containing "assign" and "without ... consent". The rules were tuned on separate development contracts and then frozen.</p>
+      </div>
+      <div class="stack">
+        <h3><span class="dot qwen" aria-hidden="true"></span>&nbsp; Local language model (Qwen 3 8B)</h3>
+        <p class="small">The model runs on the author's own PC through Ollama, so no contract text leaves the machine. It has five steps, shown below.</p>
+      </div>
+    </div>
+    <ol class="steps">
+      <li><h3>Chunk</h3><span class="muted">Split the contract into pieces of about 20,000 characters, overlapping by 2,000 so a clause on a boundary stays whole.</span></li>
+      <li><h3>Ask</h3><span class="muted">Give the model CUAD's definition of each clause and require exact quotes as JSON, or an empty list.</span></li>
+      <li><h3>Verify</h3><span class="muted">Search for every quote in the contract, allowing only minor differences. Quotes that can't be found are rejected and counted.</span></li>
+      <li><h3>Merge</h3><span class="muted">Map quotes back to their position in the full contract and remove repeats from overlapping chunks.</span></li>
+      <li><h3>Show source</h3><span class="muted">Display the contract's own words, never the model's version of them.</span></li>
+    </ol>
+    <div class="two">
+      <div class="stack"><h3>Score 1: is the clause there?</h3><p class="small">For each contract and clause type, did the tool correctly say whether the clause exists? This matters most in due diligence.</p></div>
+      <div class="stack"><h3>Score 2: is it the right text?</h3><p class="small">A predicted passage counts only if at least half of the combined words overlap with a lawyer-labelled passage. This is a harsh test, because labels are often fragments of a sentence and a useful answer can still fail it.</p></div>
+    </div>
+  </section>
+
+  <section id="results">
+    <h2>Results on 50 held-out contracts</h2>
+    <p>F1 combines precision (how often a flag is right) and recall (how many real clauses were found). 1.00 is perfect.</p>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Score shown in chart">
+        <button id="level-contract" aria-pressed="true">Is the clause there?</button>
+        <button id="level-span" aria-pressed="false">Is it the right text?</button>
+      </div>
+      <div class="legend"><span><i class="dot regex"></i>Regex rules</span><span><i class="dot qwen"></i>Qwen 3 8B</span></div>
+    </div>
+    <div class="chart" id="chart"></div>
+    <ul class="findings" id="findings"></ul>
+    <h3>Every number</h3>
+    <div class="scroll"><table id="table"></table></div>
+    <p class="small muted">"All six" pools the counts across clause types. The bold figure is the higher F1 in each pair. TP/FP/FN/TN: correct finds, false alarms, missed clauses, correctly reported absent.</p>
+    <p class="small muted" id="run-details"></p>
+    <p class="small muted"><b>How the prompt was developed:</b> it was revised once, using errors on 15 development contracts. The first 5 test contracts had already been viewed under the original prompt, so the test set was not completely unseen. Neither the prompt nor the rules were changed after the full test run.</p>
+  </section>
+
+  <section id="explore">
+    <h2>Read the answers yourself</h2>
+    <p>Pick a contract and clause type to compare what the lawyers marked with what each approach returned.</p>
+    <div class="controls">
+      <div class="field" style="flex: 1 1 11rem; max-width: 16rem;"><label class="label" for="contract-filter">Show</label><select id="contract-filter"></select></div>
+      <div class="field" style="flex: 3 1 18rem;"><label class="label" for="contract-select">Contract</label><select id="contract-select"></select></div>
+    </div>
+    <div class="tabs" id="clause-tabs" role="tablist" aria-label="Clause type"></div>
+    <div class="columns" id="columns"></div>
+  </section>
+
+  <section id="failures">
+    <h2>Where it went wrong</h2>
+    <p>Up to five examples per clause type and approach, most serious first. Some are arguably labelling choices, because annotators don't always agree on where a clause starts and ends.</p>
+    <div class="controls">
+      <div class="field" style="flex: 1 1 14rem; max-width: 20rem;"><label class="label" for="failure-clause">Clause type</label><select id="failure-clause"></select></div>
+      <div class="field" style="flex: 1 1 11rem; max-width: 14rem;"><label class="label" for="failure-approach">Approach</label><select id="failure-approach"></select></div>
+    </div>
+    <div class="stack" id="failure-list"></div>
+    <details>
+      <summary id="dropped-summary"></summary>
+      <div class="stack">
+        <p class="small muted">These never reached the output. Several are generic boilerplate the contract doesn't contain. Some may be poor copying of real text instead of invention.</p>
+        <div class="stack" id="dropped-list"></div>
+      </div>
+    </details>
+  </section>
+
+  <section id="limits">
+    <h2>Limitations and legal risks</h2>
+    <div class="risk">
+      <div><h3>Missed clauses are the most dangerous error</h3><p id="missed-text"></p></div>
+      <div><h3>Finding text isn't legal analysis</h3><p>The tool doesn't decide whether a deal structure triggers a change-of-control clause, or how a carve-out changes a cap. Those questions need legal judgement and the whole contract.</p></div>
+      <div><h3>Verified text can still be the wrong clause</h3><p>The check proves a quote exists in the contract. It doesn't prove the quote is the right clause type. A 90% fuzzy match could also pass over a small but important wording difference, so read each clause in context.</p></div>
+      <div><h3>The sample is small and narrow</h3><p>There are 50 test contracts, and only 14 or 15 positives for two clause types, so a gap of a few points may be noise. These are US public-company filings. Accuracy on English-law or private M&amp;A documents is unknown and probably lower.</p></div>
+      <div><h3>One small model was tested</h3><p>These results say nothing about larger models. The code also supports Claude through an API, but Claude has not been evaluated here.</p></div>
+      <div><h3>Client confidentiality still applies</h3><p>A local model keeps text on the machine running it, but that machine still needs appropriate security. Only public EDGAR contracts were used in this evaluation.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Data:</b> <a href="https://www.atticusprojectai.org/cuad">CUAD v1</a> by The Atticus Project, used under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Hendrycks, Burns, Chen and Ball, <i>CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review</i>, NeurIPS 2021. Quotes on this page are excerpts from that dataset.</p>
+    <p>This page is a portfolio project and is not legal advice. Every figure is generated from the evaluation's output files.</p>
+  </footer>
+</div>
+
+<script>
+const DATA = __SITE_DATA__;
+
+const CLAUSES = DATA.clause_types;
+const ALL = "All (micro)";
+const APPROACHES = [
+  { key: "baseline", row: "Baseline (regex)", name: "Regex", css: "regex" },
+  { key: "llm", row: "LLM", name: "Qwen 3 8B", css: "qwen" },
+];
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function findRow(clause, approach) {
+  return DATA.rows.find(function (row) { return row.clause_type === clause && row.approach === approach.row; });
+}
+
+function clauseLabel(clause) { return clause === ALL ? "All six combined" : clause; }
+
+function counts(row) {
+  const parts = row.contract_tp_fp_fn_tn.split("/").map(Number);
+  return { tp: parts[0], fp: parts[1], fn: parts[2], tn: parts[3] };
+}
+
+/* ---------- headline ---------- */
+function renderHeader() {
+  document.getElementById("eyebrow").textContent =
+    DATA.contracts.length + " test contracts · " + CLAUSES.length + " M&A clause types · regex vs " + DATA.stats.model;
+  const regex = findRow(ALL, APPROACHES[0]);
+  const qwen = findRow(ALL, APPROACHES[1]);
+  const regexCounts = counts(regex);
+  const qwenCounts = counts(qwen);
+  const pct = (DATA.stats.hallucination_rate * 100).toFixed(1) + "%";
+  const items = [
+    ["Is the clause there? (F1)", regex.contract_f1, qwen.contract_f1, "regex / Qwen"],
+    ["Is it the right text? (F1)", regex.span_f1, qwen.span_f1, "regex / Qwen"],
+    ["Clauses missed", regexCounts.fn, qwenCounts.fn, "regex / Qwen, of " + (regexCounts.tp + regexCounts.fn)],
+  ];
+  const holder = document.getElementById("scoreline");
+  items.forEach(function (item) {
+    const box = element("div");
+    box.append(element("div", "label", item[0]));
+    const pair = element("div", "pair", item[1] + " ");
+    pair.append(element("span", "", "/ " + item[2]));
+    box.append(pair, element("div", "small muted", item[3]));
+    holder.append(box);
+  });
+  const box = element("div");
+  box.append(element("div", "label", "Model quotes rejected"), element("div", "pair", pct),
+    element("div", "small muted", DATA.stats.quotes_dropped + " of " + DATA.stats.quotes_returned + " not found in the contract"));
+  holder.append(box);
+}
+
+/* ---------- chart ---------- */
+function renderChart(level) {
+  const key = level + "_f1";
+  const chart = document.getElementById("chart");
+  chart.replaceChildren();
+
+  const axisRow = element("div", "row axis-row");
+  axisRow.append(element("div", "spacer"));
+  const axis = element("div", "axis");
+  [0, 0.25, 0.5, 0.75, 1].forEach(function (tick) {
+    const label = element("span", "", tick.toFixed(2));
+    label.style.left = tick * 100 + "%";
+    axis.append(label);
+  });
+  axisRow.append(axis, element("div", "spacer"));
+  chart.append(axisRow);
+
+  CLAUSES.concat([ALL]).forEach(function (clause) {
+    const row = element("div", clause === ALL ? "row total" : "row");
+    row.append(element("div", "name", clauseLabel(clause)));
+    const track = element("div", "track");
+    const regexValue = Number(findRow(clause, APPROACHES[0])[key]);
+    const qwenValue = Number(findRow(clause, APPROACHES[1])[key]);
+
+    const link = element("div", "link");
+    link.style.left = Math.min(regexValue, qwenValue) * 100 + "%";
+    link.style.width = Math.abs(regexValue - qwenValue) * 100 + "%";
+    track.append(link);
+
+    APPROACHES.forEach(function (approach, index) {
+      const value = index === 0 ? regexValue : qwenValue;
+      const mark = element("button", "mark " + approach.css);
+      mark.type = "button";
+      mark.style.left = value * 100 + "%";
+      const description = clauseLabel(clause) + ": " + approach.name + " F1 " + value.toFixed(2);
+      mark.setAttribute("aria-label", description);
+      mark.addEventListener("mouseenter", function () { showTip(mark, description); });
+      mark.addEventListener("focus", function () { showTip(mark, description); });
+      mark.addEventListener("mouseleave", hideTip);
+      mark.addEventListener("blur", hideTip);
+      track.append(mark);
+    });
+    row.append(track, element("div", "delta", deltaText(regexValue, qwenValue)));
+    chart.append(row);
+  });
+  const tip = element("div");
+  tip.id = "tip";
+  tip.hidden = true;
+  chart.append(tip);
+}
+
+function deltaText(regexValue, qwenValue) {
+  const gap = Math.abs(regexValue - qwenValue).toFixed(2);
+  if (regexValue === qwenValue) return "tied";
+  return (regexValue > qwenValue ? "Regex" : "Qwen") + " +" + gap;
+}
+
+function showTip(mark, text) {
+  const tip = document.getElementById("tip");
+  const chartBox = document.getElementById("chart").getBoundingClientRect();
+  const markBox = mark.getBoundingClientRect();
+  tip.textContent = text;
+  tip.hidden = false;
+  const half = tip.offsetWidth / 2;
+  const centre = markBox.left + markBox.width / 2 - chartBox.left;
+  tip.style.left = Math.max(half, Math.min(chartBox.width - half, centre)) + "px";
+  tip.style.top = markBox.top - chartBox.top + "px";
+}
+
+function hideTip() { document.getElementById("tip").hidden = true; }
+
+function setLevel(level) {
+  document.getElementById("level-contract").setAttribute("aria-pressed", String(level === "contract"));
+  document.getElementById("level-span").setAttribute("aria-pressed", String(level === "span"));
+  renderChart(level);
+}
+
+/* ---------- table and findings ---------- */
+function renderTable() {
+  const table = document.getElementById("table");
+  const headers = ["Clause type", "Approach", "Has clause", "Contract P", "R", "F1", "TP/FP/FN/TN", "Text P", "R", "F1"];
+  const head = element("tr");
+  headers.forEach(function (text) { head.append(element("th", "", text)); });
+  const thead = element("thead");
+  thead.append(head);
+  const body = element("tbody");
+
+  CLAUSES.concat([ALL]).forEach(function (clause) {
+    const pair = APPROACHES.map(function (approach) { return findRow(clause, approach); });
+    APPROACHES.forEach(function (approach, index) {
+      const row = pair[index];
+      const other = pair[1 - index];
+      const line = element("tr", index === 0 ? "start" : "");
+      line.append(element("td", "", index === 0 ? clauseLabel(clause) : ""), element("td", "", approach.name),
+        element("td", "", index === 0 ? row.contracts_with_clause : ""),
+        element("td", "", row.contract_precision), element("td", "", row.contract_recall),
+        element("td", Number(row.contract_f1) > Number(other.contract_f1) ? "win" : "", row.contract_f1),
+        element("td", "", row.contract_tp_fp_fn_tn),
+        element("td", "", row.span_precision), element("td", "", row.span_recall),
+        element("td", Number(row.span_f1) > Number(other.span_f1) ? "win" : "", row.span_f1));
+      body.append(line);
+    });
+  });
+  table.append(thead, body);
+}
+
+function score(clause, approachIndex) { return findRow(clause, APPROACHES[approachIndex]).contract_f1; }
+
+function renderFindings() {
+  const coc = counts(findRow("Change of Control", APPROACHES[1]));
+  const law = [findRow("Governing Law", APPROACHES[0]).span_f1, findRow("Governing Law", APPROACHES[1]).span_f1];
+  const items = [
+    ["Overall it's a tie", "Clause-detection F1 is " + score(ALL, 0) + " for regex and " + score(ALL, 1) + " for Qwen. The author expected the model to win, and on this evidence it does not."],
+    ["Each is better at different clauses", "Qwen leads on Cap on Liability (" + score("Cap on Liability", 1) + " vs " + score("Cap on Liability", 0) + ") and Non-Compete (" + score("Non-Compete", 1) + " vs " + score("Non-Compete", 0) + "). Regex leads on Change of Control and Termination for Convenience."],
+    ["Change of Control is Qwen's weakest result", "It raised " + coc.fp + " false alarms against " + coc.tp + " correct finds, and it found the clause in the same share of contracts as regex."],
+    ["Fixed wording suits rules", "Governing Law language is formulaic. Regex matched the lawyers' text at " + law[0] + ", while Qwen reached " + law[1] + " because it returned extra passages."],
+  ];
+  const list = document.getElementById("findings");
+  items.forEach(function (item) {
+    const entry = element("li");
+    entry.append(element("h3", "", item[0]), element("p", "", item[1]));
+    list.append(entry);
+  });
+
+  const stats = DATA.stats;
+  document.getElementById("run-details").textContent =
+    "Qwen run: " + stats.model + " through Ollama on one consumer PC (RTX 2080, 8 GB). " + stats.chunks + " chunks, " +
+    stats.input_tokens.toLocaleString("en-GB") + " input tokens, " + stats.output_tokens.toLocaleString("en-GB") + " output tokens, " +
+    stats.errors + " errors, no API cost.";
+
+  const missRegex = counts(findRow(ALL, APPROACHES[0]));
+  const missQwen = counts(findRow(ALL, APPROACHES[1]));
+  const share = function (c) { return Math.round(c.fn / (c.tp + c.fn) * 100) + "%"; };
+  document.getElementById("missed-text").textContent =
+    "A missed change-of-control clause can cost a buyer a key contract at closing. On this test, regex failed to flag " + share(missRegex) +
+    " of the clauses present and Qwen failed to flag " + share(missQwen) + ". The tool can help someone find clauses faster. It cannot confirm that a clause is absent.";
+}
+
+/* ---------- contract explorer ---------- */
+const FILTERS = [
+  { label: "All contracts", test: function () { return true; } },
+  { label: "Regex and Qwen disagree", test: function (entry) { return present(entry.baseline) !== present(entry.llm); } },
+  { label: "Qwen missed a clause", test: function (entry) { return entry.gold.length > 0 && !present(entry.llm); } },
+  { label: "Regex missed a clause", test: function (entry) { return entry.gold.length > 0 && !present(entry.baseline); } },
+  { label: "Qwen false alarm", test: function (entry) { return entry.gold.length === 0 && present(entry.llm); } },
+  { label: "Regex false alarm", test: function (entry) { return entry.gold.length === 0 && present(entry.baseline); } },
+];
+let explorer = { filter: 1, contract: 0, clause: "" };
+
+function present(quotes) { return quotes.length > 0; }
+
+function matchingClauses(contract, filter) {
+  return CLAUSES.filter(function (clause) { return filter.test(contract.clauses[clause]); });
+}
+
+function matchingContracts() {
+  const filter = FILTERS[explorer.filter];
+  const indexes = [];
+  DATA.contracts.forEach(function (contract, index) {
+    if (matchingClauses(contract, filter).length > 0) indexes.push(index);
+  });
+  return indexes;
+}
+
+function verdict(goldCount, quotes) {
+  if (goldCount > 0 && quotes.length > 0) return { css: "good", text: "✓ Found" };
+  if (goldCount > 0) return { css: "bad", text: "✕ Missed" };
+  if (quotes.length > 0) return { css: "warn", text: "! False alarm" };
+  return { css: "none", text: "– Correctly none" };
+}
+
+function fillContractSelect() {
+  const select = document.getElementById("contract-select");
+  const indexes = matchingContracts();
+  select.replaceChildren();
+  indexes.forEach(function (index) {
+    const option = element("option", "", DATA.contracts[index].name);
+    option.value = String(index);
+    select.append(option);
+  });
+  if (indexes.indexOf(explorer.contract) === -1) explorer.contract = indexes[0];
+  select.value = String(explorer.contract);
+  chooseDefaultClause();
+}
+
+function chooseDefaultClause() {
+  const matches = matchingClauses(DATA.contracts[explorer.contract], FILTERS[explorer.filter]);
+  if (matches.indexOf(explorer.clause) === -1) explorer.clause = matches[0];
+}
+
+function renderExplorer() {
+  const contract = DATA.contracts[explorer.contract];
+  const tabs = document.getElementById("clause-tabs");
+  tabs.replaceChildren();
+  CLAUSES.forEach(function (clause) {
+    const entry = contract.clauses[clause];
+    const tab = element("button");
+    tab.type = "button";
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-selected", String(clause === explorer.clause));
+    tab.append(element("span", "", clause));
+    const summary = "Lawyers: " + (entry.gold.length ? "yes" : "no") + " · Regex: " + (present(entry.baseline) ? "yes" : "no") + " · Qwen: " + (present(entry.llm) ? "yes" : "no");
+    tab.append(element("small", "", summary));
+    tab.addEventListener("click", function () { explorer.clause = clause; renderExplorer(); });
+    tabs.append(tab);
+  });
+
+  const entry = contract.clauses[explorer.clause];
+  const columns = document.getElementById("columns");
+  columns.replaceChildren();
+
+  const goldColumn = element("div", "col");
+  const goldHead = element("div", "col-head");
+  goldHead.append(element("h3", "", "Lawyers' labels"));
+  goldHead.append(element("span", "chip none", entry.gold.length ? entry.gold.length + " passage" + (entry.gold.length > 1 ? "s" : "") : "No clause"));
+  goldColumn.append(goldHead);
+  entry.gold.forEach(function (text) {
+    const quote = element("div", "quote");
+    quote.append(element("blockquote", "", text));
+    goldColumn.append(quote);
+  });
+  if (!entry.gold.length) goldColumn.append(element("p", "empty", "The lawyers marked no passage for this clause type."));
+  columns.append(goldColumn);
+
+  APPROACHES.forEach(function (approach) {
+    const column = element("div", "col");
+    const head = element("div", "col-head");
+    head.append(element("h3", "", approach.name));
+    const result = verdict(entry.gold.length, entry[approach.key]);
+    head.append(element("span", "chip " + result.css, result.text));
+    column.append(head);
+    entry[approach.key].forEach(function (item) {
+      const quote = element("div", "quote");
+      quote.append(element("blockquote", "", item.text));
+      if (entry.gold.length) quote.append(element("div", "quote-note", item.matched ? "✓ Matches a lawyer-labelled passage" : "✕ Doesn't match closely enough"));
+      column.append(quote);
+    });
+    if (!entry[approach.key].length) column.append(element("p", "empty", "Returned nothing."));
+    columns.append(column);
+  });
+}
+
+function setupExplorer() {
+  const filterSelect = document.getElementById("contract-filter");
+  FILTERS.forEach(function (filter, index) {
+    const option = element("option", "", filter.label);
+    option.value = String(index);
+    filterSelect.append(option);
+  });
+  filterSelect.value = String(explorer.filter);
+  filterSelect.addEventListener("change", function () {
+    explorer.filter = Number(filterSelect.value);
+    fillContractSelect();
+    renderExplorer();
+  });
+  document.getElementById("contract-select").addEventListener("change", function (event) {
+    explorer.contract = Number(event.target.value);
+    chooseDefaultClause();
+    renderExplorer();
+  });
+  fillContractSelect();
+  renderExplorer();
+}
+
+/* ---------- failures ---------- */
+function quoteBlock(title, quotes, emptyText) {
+  const block = element("div", "stack");
+  block.style.gap = "0.5rem";
+  block.append(element("div", "label", title));
+  quotes.forEach(function (text) { block.append(element("blockquote", "", text)); });
+  if (!quotes.length) block.append(element("p", "empty", emptyText));
+  return block;
+}
+
+function failureLabel(kind) {
+  if (kind.indexOf("clause missed entirely") !== -1) return { css: "bad", text: "✕ Clause missed entirely" };
+  if (kind.indexOf("not in the gold labels") !== -1) return { css: "warn", text: "! False alarm" };
+  if (kind.indexOf("gold span not matched") !== -1) return { css: "none", text: "Labelled text not matched" };
+  return { css: "none", text: "Extra passage returned" };
+}
+
+function renderFailures() {
+  const clause = document.getElementById("failure-clause").value;
+  const approach = document.getElementById("failure-approach").value;
+  const holder = document.getElementById("failure-list");
+  holder.replaceChildren();
+  const failures = DATA.failures[approach][clause];
+  if (!failures.length) holder.append(element("p", "empty", "No failures for this combination."));
+  failures.forEach(function (failure) {
+    const card = element("article", "failure");
+    const label = failureLabel(failure.kind);
+    const top = element("div", "col-head");
+    top.append(element("span", "chip " + label.css, label.text));
+    card.append(top, element("div", "cname", failure.contract));
+    const pairing = element("div", "pairing");
+    pairing.append(quoteBlock("Lawyers' labels", failure.gold, "No passage marked."), quoteBlock("Tool returned", failure.predicted, "Nothing returned."));
+    card.append(pairing);
+    if (failure.note) card.append(element("div", "quote-note", "Word overlap with the closest answer: " + failure.note.replace("closest prediction has Jaccard ", "")));
+    holder.append(card);
+  });
+}
+
+function setupFailures() {
+  const clauseSelect = document.getElementById("failure-clause");
+  CLAUSES.forEach(function (clause) {
+    const option = element("option", "", clause);
+    option.value = clause;
+    clauseSelect.append(option);
+  });
+  const approachSelect = document.getElementById("failure-approach");
+  APPROACHES.slice().reverse().forEach(function (approach) {
+    const option = element("option", "", approach.name);
+    option.value = approach.key;
+    approachSelect.append(option);
+  });
+  clauseSelect.addEventListener("change", renderFailures);
+  approachSelect.addEventListener("change", renderFailures);
+  renderFailures();
+
+  const dropped = DATA.stats.dropped_examples;
+  document.getElementById("dropped-summary").textContent = "See the " + dropped.length + " quotes rejected because they weren't in the contract";
+  const list = document.getElementById("dropped-list");
+  dropped.forEach(function (item) {
+    const card = element("article", "failure");
+    const top = element("div", "col-head");
+    top.append(element("span", "chip none", item.clause_type));
+    card.append(top, element("div", "cname", item.contract), element("blockquote", "", item.quote));
+    list.append(card);
+  });
+}
+
+renderHeader();
+setLevel("contract");
+document.getElementById("level-contract").addEventListener("click", function () { setLevel("contract"); });
+document.getElementById("level-span").addEventListener("click", function () { setLevel("span"); });
+renderTable();
+renderFindings();
+setupExplorer();
+setupFailures();
+</script>
+</body>
+</html>
